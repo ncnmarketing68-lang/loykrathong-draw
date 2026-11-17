@@ -63,7 +63,7 @@
 
     <script>
         const SUPABASE_URL = 'https://swgysrzfpyccjmlcjxtb.supabase.co';
-        const SUPABASE_ANON_KEY = 'sb_publishable_2EpxA5sfcozhic3RqcmYMA_Je7EQ...'; // ใส่คีย์ของคุณ
+        const SUPABASE_ANON_KEY = 'sb_publishable_2EpxA5sfcozhic3RqcmYMA_Je7EQ...';
         
         let supabaseClient = null;
         try {
@@ -130,31 +130,41 @@
             reader.readAsDataURL(file);
         }
 
-        async function getCloudCustomerData(phone) {
-            if (!supabaseClient) return { drawsCount: 0, history: [] };
+        // ฟังก์ชันดึงข้อมูลสิทธิ์จาก Cloud สดๆ แบบบังคับไม่ให้ใช้ค่าเก่า
+        async function fetchCloudDraws(phone) {
+            if (!supabaseClient) return { count: 0, history: [] };
             try {
-                let { data, error } = await supabaseClient.from('loykrathong_records').select('*').eq('phone', phone);
+                let { data, error } = await supabaseClient
+                    .from('loykrathong_records')
+                    .select('*')
+                    .eq('phone', phone);
+                
                 if (!error && data) {
                     return {
-                        drawsCount: data.length,
-                        history: data.map(r => ({ id: r.id, rewardName: r.reward_name, branchName: r.branch_name, time: r.time }))
+                        count: data.length,
+                        history: data.map(r => ({
+                            id: r.id,
+                            rewardName: r.reward_name,
+                            branchName: r.branch_name,
+                            time: r.time || 'ไม่ระบุ'
+                        }))
                     };
                 }
-            } catch (e) {}
-            return { drawsCount: 0, history: [] };
+            } catch (err) {}
+            return { count: 0, history: [] };
         }
 
-        function getCustomerHistoryHTML(custRecord) {
-            if (!custRecord || !custRecord.history || custRecord.history.length === 0) return '';
+        function getCustomerHistoryHTML(historyList) {
+            if (!historyList || historyList.length === 0) return '';
             let html = '<div class="mt-4 text-left bg-pink-50 p-3 rounded-2xl border border-pink-200">';
             html += '<div class="text-xs font-bold text-pink-600 mb-2"><i class="fa-solid fa-clock-rotate-left mr-1"></i> ประวัติการลอยกระทงของคุณ:</div>';
             html += '<div class="space-y-2 max-h-40 overflow-y-auto pr-1">';
-            custRecord.history.forEach((h, index) => {
+            historyList.forEach((h, index) => {
                 html += `
                     <div class="text-xs text-gray-700 bg-white p-2.5 rounded-xl border border-pink-100 shadow-sm">
                         <div class="font-bold text-pink-600 mb-1">🎁 ครั้งที่ ${index + 1}: ${h.rewardName}</div>
                         <div class="text-[10px] text-gray-500 flex items-center mb-0.5"><i class="fa-solid fa-location-dot w-4 text-center mr-1 text-pink-400"></i> ${h.branchName}</div>
-                        <div class="text-[10px] text-gray-400 flex items-center"><i class="fa-solid fa-clock w-4 text-center mr-1 text-pink-400"></i> ${h.time || 'ไม่ระบุ'}</div>
+                        <div class="text-[10px] text-gray-400 flex items-center"><i class="fa-solid fa-clock w-4 text-center mr-1 text-pink-400"></i> ${h.time}</div>
                     </div>
                 `;
             });
@@ -348,14 +358,14 @@
                 btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> กำลังตรวจสอบสิทธิ์จากคลาวด์...';
                 btn.disabled = true;
 
-                // ดึงข้อมูลสิทธิ์ล่าสุดจาก Supabase Cloud สดๆ ทันที
-                let cloudData = await getCloudCustomerData(phone);
+                // เช็คสดจาก Supabase ทันที
+                let cloudCheck = await fetchCloudDraws(phone);
 
                 btn.disabled = false;
                 btn.innerHTML = 'ลอยกระทงเสี่ยงทายโชคลาภ 🌕 ✨';
 
-                if (cloudData.drawsCount >= 2) {
-                    showCustomAlert('ใช้สิทธิ์ครบแล้ว! 🚫', `หมายเลขโทรศัพท์นี้ใช้สิทธิ์ลอยกระทงครบ 2 ครั้งแล้วครับ (ไม่สามารถสุ่มซ้ำได้)` + getCustomerHistoryHTML(cloudData));
+                if (cloudCheck.count >= 2) {
+                    showCustomAlert('ใช้สิทธิ์ครบแล้ว! 🚫', `หมายเลขโทรศัพท์นี้ใช้สิทธิ์ลอยกระทงครบ 2 ครั้งแล้วครับ (ไม่สามารถสุ่มซ้ำได้)` + getCustomerHistoryHTML(cloudCheck.history));
                     return;
                 }
 
@@ -367,8 +377,8 @@
 
         async function renderDrawHTML() {
             const branchObj = BRANCHES.find(b => b.id === selectedBranch);
-            let cloudData = await getCloudCustomerData(customerPhone);
-            const remaining = Math.max(0, 2 - cloudData.drawsCount);
+            let cloudCheck = await fetchCloudDraws(customerPhone);
+            const remaining = Math.max(0, 2 - cloudCheck.count);
 
             return `
                 <div class="w-full card-glass p-6 md:p-8 rounded-3xl glow-pink text-center relative bg-white/95">
@@ -413,12 +423,12 @@
             const loader = document.getElementById(`loader-${num}`);
             if (loader) { loader.classList.remove('hidden'); loader.classList.add('flex'); }
 
-            // เช็คสิทธิ์จาก Cloud สดๆ อีกครั้งก่อนกดสุ่มจริง เพื่อป้องกันการกดจากหลายเครื่องพร้อมกัน
-            let cloudData = await getCloudCustomerData(customerPhone);
+            // ตรวจสอบสิทธิ์ล่าสุดจาก Cloud อีกรอบก่อนบันทึก ป้องกันการกดสุ่มเกิน 2 ครั้ง
+            let cloudCheck = await fetchCloudDraws(customerPhone);
             if (loader) loader.classList.add('hidden');
 
-            if (cloudData.drawsCount >= 2) {
-                showCustomAlert('ใช้สิทธิ์ครบแล้ว! 🚫', 'คุณใช้สิทธิ์ครบ 2 ครั้งแล้วครับ (ไม่สามารถสุ่มซ้ำได้)' + getCustomerHistoryHTML(cloudData), () => { goToHome(); });
+            if (cloudCheck.count >= 2) {
+                showCustomAlert('ใช้สิทธิ์ครบแล้ว! 🚫', 'คุณใช้สิทธิ์ครบ 2 ครั้งแล้วครับ (ไม่สามารถสุ่มซ้ำได้)' + getCustomerHistoryHTML(cloudCheck.history), () => { goToHome(); });
                 return;
             }
 
@@ -459,16 +469,22 @@
             if (supabaseClient) {
                 try {
                     let newId = 'kr_' + Date.now() + Math.floor(Math.random() * 1000);
+                    // บันทึกลงตาราง loykrathong_records บน Supabase
                     await supabaseClient.from('loykrathong_records').insert([{
-                        id: newId, phone: customerPhone, branch_name: branchObj.name, reward_name: won.name, reward_image: (typeof won.image === 'string' ? won.image : ''), time: timeStr
+                        id: newId, 
+                        phone: customerPhone, 
+                        branch_name: branchObj.name, 
+                        reward_name: won.name, 
+                        reward_image: (typeof won.image === 'string' ? won.image : ''), 
+                        time: timeStr
                     }]);
                 } catch(e) {}
             }
 
             setTimeout(async () => {
                 document.getElementById('anim-modal')?.remove();
-                let updatedCloud = await getCloudCustomerData(customerPhone);
-                showWinPopup(won, updatedCloud.drawsCount);
+                let updatedCheck = await fetchCloudDraws(customerPhone);
+                showWinPopup(won, updatedCheck.count);
             }, 2000);
         }
 
@@ -806,7 +822,7 @@
                 const name = modal.querySelector('#modal-reward-name').value.trim();
                 if (!name) { showCustomAlert('แจ้งเตือน', 'กรุณากรอกชื่อของรางวัล'); return; }
                 let newId = 'r_' + Date.now();
-                let newReward = { id: newId, name, image: tempImage, weight: 15 };
+                    let newReward = { id: newId, name, image: tempImage, weight: 15 };
                 
                 rewards.push(newReward);
                 BRANCHES.forEach(b => {
