@@ -108,7 +108,6 @@
         let currentAdminRole = null;
         let adminTab = 'stock';
 
-        // ฟังก์ชันดึงประวัติและนับสิทธิ์จากตาราง loykrathong_records บน Cloud สดๆ ทุกครั้ง
         async function fetchCloudDraws(phone) {
             if (!supabaseClient) return { count: 0, history: [] };
             try {
@@ -237,7 +236,6 @@
             } catch (err) {}
         }
 
-        // Realtime Subscriptions
         if (supabaseClient) {
             supabaseClient.channel('public:loykrathong_records')
                 .on('postgres_changes', { event: '*', schema: 'public', table: 'loykrathong_records' }, () => { loadSupabaseData(); })
@@ -247,7 +245,7 @@
                 .subscribe();
         }
 
-        function renderCurrentView() {
+        async function renderCurrentView() {
             const container = document.getElementById('app-container');
             if (!container) return;
             const scrollY = window.scrollY;
@@ -256,12 +254,12 @@
                 container.innerHTML = renderHomeHTML();
                 attachHomeEvents();
             } else if (currentView === 'draw') {
-                container.innerHTML = renderDrawHTML();
+                container.innerHTML = await renderDrawHTML();
             } else if (currentView === 'admin_login') {
                 container.innerHTML = renderAdminLoginHTML();
                 attachAdminLoginEvents();
             } else if (currentView === 'admin_dashboard') {
-                container.innerHTML = renderAdminDashboardHTML();
+                container.innerHTML = await renderAdminDashboardHTML();
             }
             window.scrollTo(0, scrollY);
         }
@@ -394,7 +392,6 @@
                 btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> กำลังตรวจสอบสิทธิ์จากคลาวด์...';
                 btn.disabled = true;
 
-                // ตรวจสอบสิทธิ์สดๆ จาก Supabase ทันที
                 let cloudCheck = await fetchCloudDraws(phone);
 
                 btn.disabled = false;
@@ -459,7 +456,6 @@
             const loader = document.getElementById(`loader-${num}`);
             if (loader) { loader.classList.remove('hidden'); loader.classList.add('flex'); }
 
-            // เช็คสิทธิ์ล่าสุดจาก Cloud ทันิตก่อนกดสุ่ม ป้องกันการกดพร้อมกันข้ามเครื่อง
             let cloudCheck = await fetchCloudDraws(customerData.phone);
             if (loader) loader.classList.add('hidden');
 
@@ -505,7 +501,6 @@
             if (supabaseClient) {
                 try {
                     let newId = 'kr_' + Date.now() + Math.floor(Math.random() * 1000);
-                    // บันทึกลงตาราง loykrathong_records บน Supabase ทันที
                     await supabaseClient.from('loykrathong_records').insert([{
                         id: newId, 
                         phone: customerData.phone, 
@@ -561,7 +556,7 @@
                     <p class="text-xs text-gray-600 mb-6">สิทธิ์ที่ใช้ไป: <b class="text-pink-600">${count}/2 ครั้ง</b> (เหลือ: ${remaining} ครั้ง)</p>
                     
                     <div class="flex space-x-3">
-                        ${remaining > 0 ? `<button onclick="this.closest('.fixed').remove(); currentView='draw'; renderCurrentView();" class="flex-1 py-3 bg-gradient-to-r from-pink-500 to-rose-400 text-white rounded-2xl font-bold text-sm hover:from-pink-600 shadow-md">ลอยกระทงอีก ✨</button>` : ''}
+                        ${remaining > 0 ? `<button onclick="this.closest('.fixed').remove(); currentView='draw'; renderCurrentView();" class="flex-1 py-3 bg-gradient-to-r from-pink-500 to-rose-400 text-white font-bold text-sm hover:from-pink-600 shadow-md">ลอยกระทงอีก ✨</button>` : ''}
                         <button onclick="this.closest('.fixed').remove(); goToHome();" class="flex-1 py-3 bg-gray-100 text-gray-700 rounded-2xl font-bold text-sm hover:bg-gray-200">เสร็จสิ้น</button>
                     </div>
                 </div>
