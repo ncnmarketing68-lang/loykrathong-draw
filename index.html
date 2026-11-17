@@ -63,8 +63,10 @@
     </footer>
 
     <script>
-        const SUPABASE_URL = 'https://stbzvohtzmifwjfaocli.supabase.co';
-        const SUPABASE_ANON_KEY = 'sb_publishable_8EOHwzGLMz5pHVpKPyN9og_NQDH0WzN';
+        // กำหนดค่าการเชื่อมต่อ Supabase ของคุณ
+        const SUPABASE_URL = 'https://swgysrzfpyccjmlcjxtb.supabase.co';
+        const SUPABASE_ANON_KEY = 'sb_publishable_2EpxA5sfcozhic3RqcmYMA_Je7EQ...'; // ใส่คีย์เต็มของคุณตรงนี้
+        
         let supabaseClient = null;
         try {
             if (window.supabase) {
@@ -135,7 +137,6 @@
         }
 
         function showCustomAlert(title, message, callback = null) {
-            playSound('error');
             const modal = document.createElement('div');
             modal.className = 'fixed inset-0 bg-black/85 backdrop-blur-sm z-50 flex items-center justify-center p-4';
             modal.innerHTML = `
@@ -149,73 +150,9 @@
             document.body.appendChild(modal);
 
             modal.querySelector('#alert-ok-btn').addEventListener('click', () => {
-                playSound('click');
                 modal.remove();
                 if (callback) callback();
             });
-        }
-
-        function initAudio() {
-            try {
-                if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-                if (audioCtx.state === 'suspended') audioCtx.resume();
-                if (!isBgmPlaying) { startKrathongBgm(); isBgmPlaying = true; }
-            } catch (e) {}
-        }
-
-        function playSound(type) {
-            try {
-                initAudio();
-                if (!audioCtx) return;
-                const now = audioCtx.currentTime;
-                const osc = audioCtx.createOscillator();
-                const gain = audioCtx.createGain();
-                osc.connect(gain); gain.connect(audioCtx.destination);
-                if (type === 'click') {
-                    osc.frequency.setValueAtTime(400, now);
-                    gain.gain.setValueAtTime(0.1, now);
-                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
-                    osc.start(now); osc.stop(now + 0.1);
-                } else if (type === 'magic') {
-                    osc.type = 'triangle';
-                    osc.frequency.setValueAtTime(300, now);
-                    osc.frequency.exponentialRampToValueAtTime(800, now + 0.5);
-                    gain.gain.setValueAtTime(0.2, now);
-                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.6);
-                    osc.start(now); osc.stop(now + 0.6);
-                } else if (type === 'win') {
-                    [523.25, 659.25, 783.99, 1046.50].forEach((freq, i) => {
-                        const o = audioCtx.createOscillator();
-                        const g = audioCtx.createGain();
-                        o.connect(g); g.connect(audioCtx.destination);
-                        o.frequency.setValueAtTime(freq, now + i * 0.1);
-                        g.gain.setValueAtTime(0.15, now + i * 0.1);
-                        g.gain.exponentialRampToValueAtTime(0.01, now + i * 0.1 + 0.3);
-                        o.start(now + i * 0.1); o.stop(now + i * 0.1 + 0.3);
-                    });
-                }
-            } catch (e) {}
-        }
-
-        function startKrathongBgm() {
-            if (bgmInterval) return;
-            const notes = [440, 493.88, 554.37, 659.25, 554.37, 493.88];
-            let step = 0;
-            bgmInterval = setInterval(() => {
-                if (!audioCtx || audioCtx.state !== 'running') return;
-                try {
-                    const now = audioCtx.currentTime;
-                    const osc = audioCtx.createOscillator();
-                    const gain = audioCtx.createGain();
-                    osc.type = 'sine';
-                    osc.frequency.setValueAtTime(notes[step % notes.length], now);
-                    gain.gain.setValueAtTime(0.02, now);
-                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
-                    osc.connect(gain); gain.connect(audioCtx.destination);
-                    osc.start(now); osc.stop(now + 0.4);
-                    step++;
-                } catch (e) {}
-            }, 300);
         }
 
         async function loadSupabaseData() {
@@ -307,7 +244,6 @@
         }
 
         function goToHome() {
-            playSound('click');
             currentView = 'home';
             renderCurrentView();
         }
@@ -381,7 +317,6 @@
         }
 
         function selectBranch(id) {
-            playSound('click');
             selectedBranch = id;
             renderCurrentView();
         }
@@ -391,7 +326,6 @@
             if (!form) return;
             form.addEventListener('submit', async (e) => {
                 e.preventDefault();
-                playSound('click');
                 const phone = document.getElementById('cust-phone').value.trim();
                 const phoneRegex = /^0[689]\d{8}$/;
                 if (!phoneRegex.test(phone)) {
@@ -475,7 +409,6 @@
         }
 
         async function launchKrathong(num) {
-            playSound('magic');
             const loader = document.getElementById(`loader-${num}`);
             if (loader) { loader.classList.remove('hidden'); loader.classList.add('flex'); }
 
@@ -545,7 +478,6 @@
 
             setTimeout(() => {
                 document.getElementById('anim-modal')?.remove();
-                playSound('win');
                 showWinPopup(won, customers[customerPhone]?.drawsCount || 1);
             }, 2000);
         }
@@ -553,7 +485,6 @@
         function showWinPopup(reward, count) {
             const branchObj = BRANCHES.find(b => b.id === selectedBranch);
             const remaining = Math.max(0, 2 - count);
-            const record = customers[customerPhone] || { history: [] };
 
             const modal = document.createElement('div');
             modal.className = 'fixed inset-0 bg-black/85 backdrop-blur-sm z-50 flex items-center justify-center p-4';
@@ -578,7 +509,6 @@
         }
 
         function openAdminLogin() {
-            playSound('click');
             currentView = 'admin_login';
             renderCurrentView();
         }
@@ -609,7 +539,6 @@
             if (!form) return;
             form.addEventListener('submit', (e) => {
                 e.preventDefault();
-                playSound('click');
                 const pass = document.getElementById('admin-passcode').value.trim();
                 if (pass === 'ncpm2014') {
                     currentView = 'admin_dashboard';
@@ -621,7 +550,7 @@
             });
         }
 
-        function setAdminTab(tab) { playSound('click'); adminTab = tab; renderCurrentView(); }
+        function setAdminTab(tab) { adminTab = tab; renderCurrentView(); }
 
         function renderAdminDashboardHTML() {
             let totalCust = Object.keys(customers).length;
@@ -722,7 +651,6 @@
         }
 
         async function updateStock(bId, rId, amt) {
-            playSound('click');
             branchInventories[bId][rId].stock = Math.max(0, branchInventories[bId][rId].stock + amt);
             renderCurrentView();
             await saveRewardToSupabase(rId);
