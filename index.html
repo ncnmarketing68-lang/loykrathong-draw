@@ -49,7 +49,7 @@
         </div>
         <div class="flex items-center space-x-2 text-xs text-purple-600 bg-pink-100/60 px-3 py-1.5 rounded-full border border-pink-200">
             <span class="inline-block w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
-            <span>ระบบซิงก์คลาวด์ Realtime</span>
+            <span>ระบบซิงก์คลาวด์ Realtime 100%</span>
         </div>
     </header>
 
@@ -62,7 +62,6 @@
     </footer>
 
     <script>
-        // ใช้ Supabase Credentials ล่าสุดตามที่คุณระบุ
         const SUPABASE_URL = 'https://swgysrzfpyccjmlcjxtb.supabase.co';
         const SUPABASE_ANON_KEY = 'sb_publishable_2EpxA5sfcozhic3RqcmYMA_Je7EQ...';
         
@@ -103,31 +102,50 @@
             });
         });
 
-        let customers = JSON.parse(localStorage.getItem('ncn_krathong_cust')) || {};
         let currentView = 'home';
         let selectedBranch = BRANCHES[0].id;
         let customerData = { name: '', phone: '' };
         let currentAdminRole = null;
         let adminTab = 'stock';
 
-        function getCustomerHistoryHTML(phone) {
-            let custRecord = customers[phone];
-            if (!custRecord || !custRecord.history || custRecord.history.length === 0) return '';
-            
+        // ฟังก์ชันดึงประวัติและนับสิทธิ์จากตาราง loykrathong_records บน Cloud สดๆ ทุกครั้ง
+        async function fetchCloudDraws(phone) {
+            if (!supabaseClient) return { count: 0, history: [] };
+            try {
+                let { data, error } = await supabaseClient
+                    .from('loykrathong_records')
+                    .select('*')
+                    .eq('phone', phone);
+                
+                if (!error && data) {
+                    return {
+                        count: data.length,
+                        history: data.map(r => ({
+                            id: r.id,
+                            rewardName: r.reward_name,
+                            branchName: r.branch_name,
+                            time: r.time || 'ไม่ระบุ'
+                        }))
+                    };
+                }
+            } catch (err) {}
+            return { count: 0, history: [] };
+        }
+
+        function getCustomerHistoryHTML(historyList) {
+            if (!historyList || historyList.length === 0) return '';
             let html = '<div class="mt-4 text-left bg-pink-50 p-3 rounded-2xl border border-pink-200">';
             html += '<div class="text-xs font-bold text-pink-600 mb-2"><i class="fa-solid fa-clock-rotate-left mr-1"></i> ประวัติการลอยกระทงของคุณ:</div>';
             html += '<div class="space-y-2 max-h-40 overflow-y-auto pr-1">';
-            
-            custRecord.history.forEach((h, index) => {
+            historyList.forEach((h, index) => {
                 html += `
                     <div class="text-xs text-gray-700 bg-white p-2.5 rounded-xl border border-pink-100 shadow-sm">
                         <div class="font-bold text-pink-600 mb-1">🎁 ครั้งที่ ${index + 1}: ${h.rewardName}</div>
                         <div class="text-[10px] text-gray-500 flex items-center mb-0.5"><i class="fa-solid fa-location-dot w-4 text-center mr-1 text-pink-400"></i> ${h.branchName}</div>
-                        <div class="text-[10px] text-gray-400 flex items-center"><i class="fa-solid fa-clock w-4 text-center mr-1 text-pink-400"></i> ${h.time || 'ไม่ระบุ'}</div>
+                        <div class="text-[10px] text-gray-400 flex items-center"><i class="fa-solid fa-clock w-4 text-center mr-1 text-pink-400"></i> ${h.time}</div>
                     </div>
                 `;
             });
-            
             html += '</div></div>';
             return html;
         }
@@ -144,7 +162,6 @@
                 </div>
             `;
             document.body.appendChild(modal);
-
             modal.querySelector('#alert-ok-btn').addEventListener('click', () => {
                 modal.remove();
                 if (callback) callback();
@@ -177,13 +194,9 @@
         async function loadSupabaseData() {
             if (!supabaseClient) return;
             try {
-                let oldRewardsCount = rewards ? rewards.length : 0;
-
                 let { data: rewData } = await supabaseClient.from('loykrathong_rewards').select('*');
                 if (rewData && rewData.length > 0) {
-                    rewards = rewData.map(r => ({
-                        id: r.id, name: r.name, image: r.image, weight: 15
-                    }));
+                    rewards = rewData.map(r => ({ id: r.id, name: r.name, image: r.image, weight: 15 }));
                     branchInventories = {};
                     BRANCHES.forEach(b => {
                         branchInventories[b.id] = {};
@@ -199,42 +212,7 @@
                     localStorage.setItem('ncn_krathong_rewards', JSON.stringify(rewards));
                     localStorage.setItem('ncn_krathong_inv', JSON.stringify(branchInventories));
                 }
-
-                let { data: recData, error } = await supabaseClient.from('loykrathong_records').select('*');
-                if (!error && recData) {
-                    let freshCust = {};
-                    recData.forEach(r => {
-                        let phone = r.phone;
-                        if (!freshCust[phone]) {
-                            freshCust[phone] = { name: r.name || '', drawsCount: 0, history: [] };
-                        }
-                        let exists = freshCust[phone].history.some(h => h.rewardName === r.reward_name && h.branchName === r.branch_name && h.id === r.id);
-                        if (!exists) {
-                            freshCust[phone].drawsCount += 1;
-                            freshCust[phone].history.push({
-                                id: r.id,
-                                rewardName: r.reward_name || 'ไม่ระบุ',
-                                branchName: r.branch_name,
-                                time: r.time || 'ไม่ระบุ'
-                            });
-                        }
-                    });
-                    customers = freshCust;
-                    localStorage.setItem('ncn_krathong_cust', JSON.stringify(customers));
-                }
-
-                if (currentView === 'admin_dashboard' && adminTab === 'stock' && rewards.length === oldRewardsCount) {
-                    BRANCHES.forEach(b => {
-                        rewards.forEach(r => {
-                            if (document.getElementById(`stock-val-${b.id}-${r.id}`)) {
-                                updateStockDOM(b.id, r.id);
-                                updateActiveDOM(b.id, r.id);
-                            }
-                        });
-                    });
-                } else {
-                    renderCurrentView();
-                }
+                renderCurrentView();
             } catch (err) {}
         }
 
@@ -259,9 +237,14 @@
             } catch (err) {}
         }
 
+        // Realtime Subscriptions
         if (supabaseClient) {
-            supabaseClient.channel('public:loykrathong_records').on('postgres_changes', { event: '*', schema: 'public', table: 'loykrathong_records' }, () => { loadSupabaseData(); }).subscribe();
-            supabaseClient.channel('public:loykrathong_rewards').on('postgres_changes', { event: '*', schema: 'public', table: 'loykrathong_rewards' }, () => { loadSupabaseData(); }).subscribe();
+            supabaseClient.channel('public:loykrathong_records')
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'loykrathong_records' }, () => { loadSupabaseData(); })
+                .subscribe();
+            supabaseClient.channel('public:loykrathong_rewards')
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'loykrathong_rewards' }, () => { loadSupabaseData(); })
+                .subscribe();
         }
 
         function renderCurrentView() {
@@ -290,15 +273,9 @@
 
         function renderHomeHTML() {
             const branchObj = BRANCHES.find(b => b.id === selectedBranch) || BRANCHES[0];
-            const activeRewards = (rewards || []).filter(r => {
-                const inv = branchInventories[selectedBranch]?.[r.id];
-                return inv && inv.active === true;
-            });
-
-            let totalBranchStock = 0;
-            activeRewards.forEach(r => {
-                totalBranchStock += (branchInventories[selectedBranch][r.id].stock || 0);
-            });
+            const activeRewards = (rewards || []).filter(r => branchInventories[selectedBranch]?.[r.id]?.active);
+            let totalStock = 0;
+            activeRewards.forEach(r => totalStock += (branchInventories[selectedBranch][r.id].stock || 0));
 
             return `
                 <div class="w-full card-glass p-6 md:p-8 rounded-3xl glow-pink relative bg-white/95">
@@ -327,27 +304,23 @@
                     <div class="mb-6 bg-pink-50/60 p-4 rounded-2xl border border-pink-200 shadow-inner">
                         <div class="flex justify-between items-center mb-2">
                             <span class="text-xs font-semibold text-pink-600"><i class="fa-solid fa-gift mr-1 text-pink-400"></i> ของรางวัลสาขา: ${branchObj.name}</span>
-                            <span class="text-xs text-purple-500 font-semibold">คงเหลือ ${totalBranchStock} ชิ้น</span>
+                            <span class="text-xs text-purple-500 font-semibold">คงเหลือ ${totalStock} ชิ้น</span>
                         </div>
                         <div class="marquee-container py-2 cursor-pointer">
-                            ${activeRewards.length === 0 ? 
-                                `<div class="w-full text-center text-purple-400 py-4 text-xs font-semibold">ขณะนี้ไม่มีของรางวัลเปิดสุ่มในสาขานี้</div>` :
-                                `<div class="marquee-track">
-                                    ${activeRewards.concat(activeRewards).concat(activeRewards).map(r => {
-                                        const inv = branchInventories[selectedBranch]?.[r.id] || { stock: 0 };
-                                        const isImg = typeof r.image === 'string' && r.image.startsWith('data:image');
-                                        return `
-                                            <div onclick="showRewardDetail('${r.id}')" class="flex-shrink-0 w-32 bg-white border border-pink-200 rounded-2xl p-3 text-center shadow-sm hover:border-pink-500 transition-all">
-                                                <div class="text-3xl mb-1 flex items-center justify-center h-10">
-                                                    ${isImg ? `<img src="${r.image}" class="w-10 h-10 object-cover rounded-xl">` : r.image}
-                                                </div>
-                                                <div class="text-xs font-semibold text-gray-700 truncate">${r.name}</div>
-                                                <div class="text-[10px] text-pink-500 font-semibold mt-1">เหลือ ${inv.stock} ชิ้น</div>
+                            <div class="marquee-track">
+                                ${activeRewards.concat(activeRewards).map(r => {
+                                    const isImg = typeof r.image === 'string' && r.image.startsWith('data:image');
+                                    return `
+                                        <div onclick="showRewardDetail('${r.id}')" class="flex-shrink-0 w-32 bg-white border border-pink-200 rounded-2xl p-3 text-center shadow-sm hover:border-pink-500 transition-all">
+                                            <div class="text-3xl mb-1 flex items-center justify-center h-10">
+                                                ${isImg ? `<img src="${r.image}" class="w-10 h-10 object-cover rounded-xl">` : r.image}
                                             </div>
-                                        `;
-                                    }).join('')}
-                                </div>`
-                            }
+                                            <div class="text-xs font-semibold text-gray-700 truncate">${r.name}</div>
+                                            <div class="text-[10px] text-pink-500 font-semibold mt-1">เหลือ ${branchInventories[selectedBranch][r.id].stock} ชิ้น</div>
+                                        </div>
+                                    `;
+                                }).join('')}
+                            </div>
                         </div>
                     </div>
 
@@ -373,7 +346,7 @@
                     </form>
 
                     <div class="text-center mt-4 text-xs text-purple-400">
-                        <i class="fa-solid fa-shield-halved mr-1"></i> จำกัดสิทธิ์สูงสุด 2 ครั้งต่อ 1 เบอร์โทรศัพท์ (รวมทุกสาขา)
+                        <i class="fa-solid fa-shield-halved mr-1"></i> จำกัดสิทธิ์สูงสุด 2 ครั้งต่อ 1 เบอร์โทรศัพท์ (เชื่อมต่อทุกสาขาแบบ Realtime)
                     </div>
                 </div>
             `;
@@ -421,31 +394,14 @@
                 btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> กำลังตรวจสอบสิทธิ์จากคลาวด์...';
                 btn.disabled = true;
 
-                let supaDraws = 0;
-                let supaHistory = [];
-                if (supabaseClient) {
-                    try {
-                        let { data } = await supabaseClient.from('loykrathong_records').select('*').eq('phone', phone);
-                        if (data) {
-                            supaDraws = data.length;
-                            supaHistory = data.map(r => ({
-                                id: r.id,
-                                rewardName: r.reward_name,
-                                branchName: r.branch_name,
-                                time: r.time || 'ไม่ระบุ'
-                            }));
-                        }
-                    } catch (e) {}
-                }
-
-                customers[phone] = { name: name, drawsCount: supaDraws, history: supaHistory };
-                localStorage.setItem('ncn_krathong_cust', JSON.stringify(customers));
+                // ตรวจสอบสิทธิ์สดๆ จาก Supabase ทันที
+                let cloudCheck = await fetchCloudDraws(phone);
 
                 btn.disabled = false;
                 btn.innerHTML = 'ลอยกระทงเสี่ยงทายโชคลาภ 🌕 ✨';
 
-                if (supaDraws >= 2) {
-                    showCustomAlert('ใช้สิทธิ์ครบแล้ว! 🚫', 'หมายเลขโทรศัพท์นี้ใช้สิทธิ์ลอยกระทงครบ 2 ครั้งแล้วครับ' + getCustomerHistoryHTML(phone));
+                if (cloudCheck.count >= 2) {
+                    showCustomAlert('ใช้สิทธิ์ครบแล้ว! 🚫', `หมายเลขโทรศัพท์นี้ใช้สิทธิ์ลอยกระทงครบ 2 ครั้งแล้วครับ (ไม่สามารถสุ่มซ้ำได้)` + getCustomerHistoryHTML(cloudCheck.history));
                     return;
                 }
 
@@ -455,9 +411,9 @@
             });
         }
 
-        function renderDrawHTML() {
-            const custRecord = customers[customerData.phone] || { drawsCount: 0 };
-            const remaining = Math.max(0, 2 - custRecord.drawsCount);
+        async function renderDrawHTML() {
+            let cloudCheck = await fetchCloudDraws(customerData.phone);
+            const remaining = Math.max(0, 2 - cloudCheck.count);
             const branchObj = BRANCHES.find(b => b.id === selectedBranch);
 
             return `
@@ -483,7 +439,7 @@
                             <div onclick="launchKrathong(${num})" class="card-glass bg-white p-6 rounded-3xl cursor-pointer hover:border-pink-500 hover:glow-pink transition-all transform hover:-translate-y-1 group relative overflow-hidden shadow-sm">
                                 <div id="loader-${num}" class="absolute inset-0 bg-white/90 z-10 hidden flex-col items-center justify-center">
                                     <i class="fa-solid fa-spinner fa-spin text-2xl text-pink-500 mb-2"></i>
-                                    <span class="text-xs text-pink-600 font-semibold">กำลังตรวจสอบ...</span>
+                                    <span class="text-xs text-pink-600 font-semibold">กำลังตรวจสอบสิทธิ์...</span>
                                 </div>
                                 <div class="text-5xl mb-3 animate-pulse-slow group-hover:scale-110 transition-transform">🌸</div>
                                 <div class="text-sm font-bold text-pink-600">กระทงมงคล #${num}</div>
@@ -503,26 +459,12 @@
             const loader = document.getElementById(`loader-${num}`);
             if (loader) { loader.classList.remove('hidden'); loader.classList.add('flex'); }
 
-            let supaDraws = 0;
-            if (supabaseClient) {
-                try {
-                    let { data } = await supabaseClient.from('loykrathong_records').select('*').eq('phone', customerData.phone);
-                    if (data) {
-                        supaDraws = data.length;
-                        customers[customerData.phone] = {
-                            name: customerData.name,
-                            drawsCount: supaDraws,
-                            history: data.map(r => ({ id: r.id, rewardName: r.reward_name, branchName: r.branch_name, time: r.time || 'ไม่ระบุ' }))
-                        };
-                        localStorage.setItem('ncn_krathong_cust', JSON.stringify(customers));
-                    }
-                } catch(e) {}
-            }
-
+            // เช็คสิทธิ์ล่าสุดจาก Cloud ทันิตก่อนกดสุ่ม ป้องกันการกดพร้อมกันข้ามเครื่อง
+            let cloudCheck = await fetchCloudDraws(customerData.phone);
             if (loader) loader.classList.add('hidden');
 
-            if (supaDraws >= 2) {
-                showCustomAlert('ใช้สิทธิ์ครบแล้ว! 🚫', 'คุณใช้สิทธิ์ครบ 2 ครั้งแล้วครับ (ไม่สามารถสุ่มซ้ำได้)' + getCustomerHistoryHTML(customerData.phone), () => { goToHome(); });
+            if (cloudCheck.count >= 2) {
+                showCustomAlert('ใช้สิทธิ์ครบแล้ว! 🚫', 'คุณใช้สิทธิ์ครบ 2 ครั้งแล้วครับ (ไม่สามารถสุ่มซ้ำได้)' + getCustomerHistoryHTML(cloudCheck.history), () => { goToHome(); });
                 return;
             }
 
@@ -563,6 +505,7 @@
             if (supabaseClient) {
                 try {
                     let newId = 'kr_' + Date.now() + Math.floor(Math.random() * 1000);
+                    // บันทึกลงตาราง loykrathong_records บน Supabase ทันที
                     await supabaseClient.from('loykrathong_records').insert([{
                         id: newId, 
                         phone: customerData.phone, 
@@ -572,30 +515,21 @@
                         reward_image: (typeof won.image === 'string' ? won.image : ''), 
                         time: timeStr
                     }]);
-
-                    let { data } = await supabaseClient.from('loykrathong_records').select('*').eq('phone', customerData.phone);
-                    if (data) {
-                        customers[customerData.phone] = {
-                            name: customerData.name,
-                            drawsCount: data.length,
-                            history: data.map(r => ({ id: r.id, rewardName: r.reward_name, branchName: r.branch_name, time: r.time || 'ไม่ระบุ' }))
-                        };
-                        localStorage.setItem('ncn_krathong_cust', JSON.stringify(customers));
-                    }
                 } catch(e) {}
             }
 
-            setTimeout(() => {
+            setTimeout(async () => {
                 document.getElementById('anim-modal')?.remove();
-                showWinPopup(won, customers[customerData.phone]?.drawsCount || 1);
+                let updatedCheck = await fetchCloudDraws(customerData.phone);
+                showWinPopup(won, updatedCheck.count);
             }, 2000);
         }
 
-        function showWinPopup(reward, drawsCount) {
+        async function showWinPopup(reward, count) {
             const branchObj = BRANCHES.find(b => b.id === selectedBranch);
-            const remaining = Math.max(0, 2 - drawsCount);
+            const remaining = Math.max(0, 2 - count);
             const isImg = typeof reward.image === 'string' && reward.image.startsWith('data:image');
-            const custRecord = customers[customerData.phone] || { history: [] };
+            let cloudCheck = await fetchCloudDraws(customerData.phone);
 
             const modal = document.createElement('div');
             modal.className = 'fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4';
@@ -615,7 +549,7 @@
                     <div class="mb-4 text-left bg-pink-50/60 p-3 rounded-2xl border border-pink-200">
                         <div class="text-xs font-bold text-pink-600 mb-2"><i class="fa-solid fa-clock-rotate-left mr-1"></i> ประวัติรางวัลทั้งหมด:</div>
                         <div class="space-y-1 max-h-28 overflow-y-auto pr-1">
-                            ${custRecord.history.map((h, index) => `
+                            ${cloudCheck.history.map((h, index) => `
                                 <div class="text-xs text-gray-700 flex justify-between items-center bg-white p-2 rounded-xl border border-pink-100">
                                     <span><b>#${index + 1}</b> 🎁 ${h.rewardName}</span>
                                     <span class="text-[10px] text-gray-400">${h.branchName}</span>
@@ -624,7 +558,7 @@
                         </div>
                     </div>
 
-                    <p class="text-xs text-gray-600 mb-6">สิทธิ์ที่ใช้ไป: <b class="text-pink-600">${drawsCount}/2 ครั้ง</b> (เหลือ: ${remaining} ครั้ง)</p>
+                    <p class="text-xs text-gray-600 mb-6">สิทธิ์ที่ใช้ไป: <b class="text-pink-600">${count}/2 ครั้ง</b> (เหลือ: ${remaining} ครั้ง)</p>
                     
                     <div class="flex space-x-3">
                         ${remaining > 0 ? `<button onclick="this.closest('.fixed').remove(); currentView='draw'; renderCurrentView();" class="flex-1 py-3 bg-gradient-to-r from-pink-500 to-rose-400 text-white rounded-2xl font-bold text-sm hover:from-pink-600 shadow-md">ลอยกระทงอีก ✨</button>` : ''}
@@ -702,13 +636,21 @@
 
         function setAdminTab(tab) { adminTab = tab; renderCurrentView(); }
 
-        function renderAdminDashboardHTML() {
+        async function renderAdminDashboardHTML() {
+            let { data: recData } = await supabaseClient.from('loykrathong_records').select('*');
+            let cloudCust = {};
+            let totalDraws = 0;
+            if (recData) {
+                totalDraws = recData.length;
+                recData.forEach(r => {
+                    if (!cloudCust[r.phone]) cloudCust[r.phone] = { name: r.name || '-', drawsCount: 0, history: [] };
+                    cloudCust[r.phone].drawsCount += 1;
+                    cloudCust[r.phone].history.push({ rewardName: r.reward_name, branchName: r.branch_name, time: r.time });
+                });
+            }
+            let totalCustomers = Object.keys(cloudCust).length;
             const isCentral = currentAdminRole === 'central';
             const roleName = isCentral ? 'แอดมินส่วนกลาง (ทุกสาขา)' : (BRANCHES.find(b => b.id === currentAdminRole)?.name || '');
-
-            let totalCustomers = Object.keys(customers).length;
-            let totalDraws = 0;
-            Object.values(customers).forEach(c => totalDraws += (c.drawsCount || 0));
 
             return `
                 <div class="w-full card-glass p-6 rounded-3xl glow-pink bg-white/95">
@@ -816,15 +758,14 @@
                                 </thead>
                                 <tbody class="divide-y divide-pink-100">
                                     ${totalCustomers === 0 ? `<tr><td colspan="5" class="p-4 text-center text-purple-400">ยังไม่มีข้อมูลลูกค้าบนคลาวด์</td></tr>` : 
-                                    Object.entries(customers).map(([phone, data]) => `
+                                    Object.entries(cloudCust).map(([phone, data]) => `
                                         <tr>
                                             <td class="p-3 font-mono font-bold text-pink-600">${phone}</td>
-                                            <td class="p-3">${data.name || '-'}</td>
+                                            <td class="p-3">${data.name}</td>
                                             <td class="p-3"><span class="px-2.5 py-1 bg-pink-100 text-pink-700 rounded-full text-xs font-semibold">${data.drawsCount} / 2 ครั้ง</span></td>
                                             <td class="p-3 text-xs">${(data.history || []).map(h => `<div>🎁 ${h.rewardName} (${h.branchName})</div>`).join('')}</td>
-                                            <td class="p-3 text-center space-x-1">
-                                                <button onclick="resetCustomerRights('${phone}')" class="px-3 py-1 bg-amber-500 text-white rounded-xl text-xs font-bold hover:bg-amber-600 shadow-sm">รีเซ็ตสิทธิ์</button>
-                                                <button onclick="deleteCustomerRecord('${phone}')" class="px-3 py-1 bg-rose-500 text-white rounded-xl text-xs font-bold hover:bg-rose-600 shadow-sm">ลบ</button>
+                                            <td class="p-3 text-center">
+                                                <button onclick="resetCustomerRights('${phone}')" class="px-3 py-1 bg-rose-500 text-white rounded-xl text-xs font-bold hover:bg-rose-600 shadow-sm">รีเซ็ตสิทธิ์</button>
                                             </td>
                                         </tr>
                                     `).join('')}
@@ -1061,23 +1002,10 @@
 
         async function resetCustomerRights(phone) {
             if (confirm(`ต้องการรีเซ็ตสิทธิ์ของเบอร์ ${phone} ให้กลับเป็น 0 (สิทธิ์เต็ม 2 ครั้ง) หรือไม่?`)) {
-                delete customers[phone];
-                localStorage.setItem('ncn_krathong_cust', JSON.stringify(customers));
                 if (supabaseClient) {
                     await supabaseClient.from('loykrathong_records').delete().eq('phone', phone);
                 }
-                renderCurrentView();
-            }
-        }
-
-        async function deleteCustomerRecord(phone) {
-            if (confirm(`⚠️ ยืนยันการลบประวัติและสิทธิ์ทั้งหมดของเบอร์ ${phone}?`)) {
-                delete customers[phone];
-                localStorage.setItem('ncn_krathong_cust', JSON.stringify(customers));
-                if (supabaseClient) {
-                    await supabaseClient.from('loykrathong_records').delete().eq('phone', phone);
-                }
-                renderCurrentView();
+                loadSupabaseData();
             }
         }
 
