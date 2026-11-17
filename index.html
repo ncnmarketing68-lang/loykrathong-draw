@@ -13,10 +13,10 @@
     <!-- Supabase JS SDK -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        body { font-family: 'Sarabun', sans-serif; background-color: #fdf4f8; color: #4a3b5c; }
-        .krathong-gradient { background: linear-gradient(135deg, #fff0f5 0%, #fae8ff 50%, #fef3c7 100%); }
-        .card-glass { background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(10px); border: 2px solid rgba(244, 114, 182, 0.3); box-shadow: 0 10px 30px rgba(236, 72, 153, 0.1); }
-        .glow-pink { box-shadow: 0 0 25px rgba(244, 114, 182, 0.4); }
+        body { font-family: 'Sarabun', sans-serif; background-color: #fffafc; color: #4a3b5c; }
+        .krathong-gradient { background: linear-gradient(135deg, #fff5f7 0%, #fffbeb 50%, #fdf2f8 100%); }
+        .card-glass { background: rgba(255, 255, 255, 0.92); backdrop-filter: blur(10px); border: 2px solid rgba(244, 114, 182, 0.25); box-shadow: 0 10px 30px rgba(236, 72, 153, 0.08); }
+        .glow-pink { box-shadow: 0 0 25px rgba(244, 114, 182, 0.35); }
         @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
         .animate-float { animation: float 3s ease-in-out infinite; }
         @keyframes pulse-slow { 0%, 100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.03); opacity: 0.9; } }
@@ -26,13 +26,13 @@
         .marquee-track:hover { animation-play-state: paused; }
         @keyframes marquee { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
         ::-webkit-scrollbar { width: 8px; height: 8px; }
-        ::-webkit-scrollbar-track { background: #fae8ff; }
+        ::-webkit-scrollbar-track { background: #fff0f5; }
         ::-webkit-scrollbar-thumb { background: #f472b6; border-radius: 4px; }
     </style>
 </head>
 <body class="min-h-screen flex flex-col justify-between krathong-gradient relative overflow-x-hidden">
 
-    <div class="fixed inset-0 pointer-events-none z-0 overflow-hidden opacity-40">
+    <div class="fixed inset-0 pointer-events-none z-0 overflow-hidden opacity-30">
         <div class="absolute top-10 left-10 text-4xl animate-float">🌸</div>
         <div class="absolute top-1/4 right-12 text-4xl animate-float" style="animation-delay: 1s;">🌕</div>
         <div class="absolute bottom-20 left-1/4 text-3xl animate-float" style="animation-delay: 2s;">🕯️</div>
@@ -41,10 +41,10 @@
 
     <header class="w-full py-4 px-6 card-glass border-b border-pink-200 flex justify-between items-center z-20">
         <div class="flex items-center space-x-3 cursor-pointer" onclick="goToHome()">
-            <div class="w-10 h-10 rounded-full bg-pink-500 flex items-center justify-center glow-pink text-white text-xl">🌸</div>
+            <div class="w-10 h-10 rounded-full bg-pink-500 flex items-center justify-center glow-pink text-white text-xl">🌕</div>
             <div>
                 <h1 class="font-bold text-lg text-pink-600">NCN Medgroup</h1>
-                <p class="text-xs text-purple-600">LOY KRATHONG LUCKY DRAW 🌕✨</p>
+                <p class="text-xs text-purple-500">LOY KRATHONG LUCKY DRAW 🌸🕯️</p>
             </div>
         </div>
         <div class="flex items-center space-x-2 text-xs text-purple-600 bg-pink-100/60 px-3 py-1.5 rounded-full border border-pink-200">
@@ -56,7 +56,7 @@
     <main id="app-container" class="flex-grow container mx-auto px-4 py-8 max-w-4xl z-10 flex flex-col items-center justify-center">
     </main>
 
-    <footer class="w-full py-4 text-center text-xs text-purple-500 z-20 border-t border-pink-200/60 bg-white/40">
+    <footer class="w-full py-4 text-center text-xs text-purple-500 z-20 border-t border-pink-200/60 bg-white/60">
         <p>© NCN Medgroup • เทศกาลลอยกระทงสุ่มของรางวัลออนไลน์ 7 สาขา</p>
         <p class="mt-1"><a href="javascript:void(0)" onclick="openAdminLogin()" class="hover:text-pink-600 font-semibold underline">🔐 เข้าสู่ระบบแอดมินส่วนกลาง</a></p>
     </footer>
@@ -135,13 +135,13 @@
             let custRecord = customers[phone];
             if (!custRecord || !custRecord.history || custRecord.history.length === 0) return '';
             
-            let html = '<div class="mt-4 text-left bg-pink-50 p-3 rounded-xl border border-pink-200">';
-            html += '<div class="text-xs font-bold text-pink-600 mb-2"><i class="fa-solid fa-clock-rotate-left mr-1"></i> ประวัติการลอยกระทงลุ้นโชคของคุณ:</div>';
+            let html = '<div class="mt-4 text-left bg-pink-50 p-3 rounded-2xl border border-pink-200">';
+            html += '<div class="text-xs font-bold text-pink-600 mb-2"><i class="fa-solid fa-clock-rotate-left mr-1"></i> ประวัติการลอยกระทงของคุณ:</div>';
             html += '<div class="space-y-2 max-h-40 overflow-y-auto pr-1">';
             
             custRecord.history.forEach((h, index) => {
                 html += `
-                    <div class="text-xs text-purple-700 bg-white p-2.5 rounded-lg border border-pink-100 shadow-sm">
+                    <div class="text-xs text-gray-700 bg-white p-2.5 rounded-xl border border-pink-100 shadow-sm">
                         <div class="font-bold text-pink-600 mb-1">🎁 ครั้งที่ ${index + 1}: ${h.rewardName}</div>
                         <div class="text-[10px] text-gray-500 flex items-center mb-0.5"><i class="fa-solid fa-location-dot w-4 text-center mr-1 text-pink-400"></i> ${h.branchName}</div>
                         <div class="text-[10px] text-gray-400 flex items-center"><i class="fa-solid fa-clock w-4 text-center mr-1 text-pink-400"></i> ${h.time || 'ไม่ระบุ'}</div>
@@ -155,13 +155,13 @@
 
         function showCustomAlert(title, message, callback = null) {
             const modal = document.createElement('div');
-            modal.className = 'fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4';
+            modal.className = 'fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4';
             modal.innerHTML = `
                 <div class="card-glass p-6 md:p-8 rounded-3xl max-w-sm w-full text-center glow-pink relative animate-pulse-slow bg-white">
-                    <div class="text-6xl mb-3 animate-bounce">🌸</div>
+                    <div class="text-6xl mb-3 animate-bounce">🌕</div>
                     <h3 class="text-xl font-bold text-pink-600 mb-2">${title}</h3>
                     <div class="text-sm text-gray-600 mb-6 leading-relaxed">${message}</div>
-                    <button id="alert-ok-btn" class="w-full py-3 bg-gradient-to-r from-pink-500 to-rose-400 text-white font-bold rounded-2xl hover:from-pink-600 hover:to-rose-500 glow-pink transition-all shadow-md">เข้าใจแล้ว ✨</button>
+                    <button id="alert-ok-btn" class="w-full py-3 bg-gradient-to-r from-pink-500 to-rose-400 text-white font-bold rounded-2xl hover:from-pink-600 glow-pink transition-all shadow-md">เข้าใจแล้ว ✨</button>
                 </div>
             `;
             document.body.appendChild(modal);
@@ -272,7 +272,7 @@
             activeRewards.forEach(r => totalStock += (branchInventories[selectedBranch][r.id].stock || 0));
 
             return `
-                <div class="w-full card-glass p-6 md:p-8 rounded-3xl glow-pink relative bg-white/90">
+                <div class="w-full card-glass p-6 md:p-8 rounded-3xl glow-pink relative bg-white/95">
                     <div class="absolute top-4 left-4 text-2xl">🌸</div>
                     <div class="absolute top-4 right-4 text-2xl">🌕</div>
                     
@@ -288,14 +288,14 @@
                         </label>
                         <div class="grid grid-cols-2 md:grid-cols-4 gap-2">
                             ${BRANCHES.map(b => `
-                                <button type="button" onclick="selectBranch('${b.id}')" class="p-3 rounded-2xl text-sm font-medium transition-all text-left truncate shadow-sm ${selectedBranch === b.id ? 'bg-gradient-to-r from-pink-500 to-rose-400 text-white glow-pink font-bold' : 'bg-pink-50/60 text-purple-700 hover:bg-pink-100 border border-pink-200'}">
+                                <button type="button" onclick="selectBranch('${b.id}')" class="p-3 rounded-2xl text-sm font-medium transition-all text-left truncate shadow-sm ${selectedBranch === b.id ? 'bg-gradient-to-r from-pink-500 to-rose-400 text-white glow-pink font-bold' : 'bg-pink-50/70 text-purple-700 hover:bg-pink-100 border border-pink-200'}">
                                     <i class="fa-solid fa-location-dot mr-1"></i> ${b.name}
                                 </button>
                             `).join('')}
                         </div>
                     </div>
 
-                    <div class="mb-6 bg-pink-50/50 p-4 rounded-2xl border border-pink-200 shadow-inner">
+                    <div class="mb-6 bg-pink-50/60 p-4 rounded-2xl border border-pink-200 shadow-inner">
                         <div class="flex justify-between items-center mb-2">
                             <span class="text-xs font-semibold text-pink-600"><i class="fa-solid fa-gift mr-1 text-pink-400"></i> ของรางวัลสาขา: ${branchObj.name}</span>
                             <span class="text-xs text-purple-500 font-semibold">คงเหลือ ${totalStock} ชิ้น</span>
@@ -323,10 +323,10 @@
                             <label class="block text-sm font-semibold text-pink-600 mb-1">
                                 <i class="fa-solid fa-phone mr-2 text-pink-400"></i> 2. กรอกเบอร์โทรศัพท์มือถือ (10 หลัก)
                             </label>
-                            <input type="tel" id="cust-phone" maxlength="10" required placeholder="08XXXXXXXX" value="${customerPhone}" oninput="customerPhone = this.value" class="w-full px-4 py-3 rounded-2xl bg-white border-2 border-pink-200 text-gray-700 text-lg tracking-widest text-center focus:outline-none focus:border-pink-500 shadow-sm">
+                            <input type="tel" id="cust-phone" maxlength="10" required placeholder="08XXXXXXXX" value="${customerPhone}" oninput="customerPhone = this.value" class="w-full px-4 py-3.5 rounded-2xl bg-white border-2 border-pink-200 text-gray-700 text-lg tracking-widest text-center focus:outline-none focus:border-pink-500 shadow-sm">
                         </div>
 
-                        <button id="btn-submit" type="submit" class="w-full py-4 mt-2 rounded-2xl bg-gradient-to-r from-pink-500 to-rose-400 text-white font-bold text-lg hover:from-pink-600 hover:to-rose-500 glow-pink transition-all transform hover:scale-[1.01] flex justify-center items-center shadow-md">
+                        <button id="btn-submit" type="submit" class="w-full py-4 mt-2 rounded-2xl bg-gradient-to-r from-pink-500 to-rose-400 text-white font-bold text-lg hover:from-pink-600 glow-pink transition-all transform hover:scale-[1.01] flex justify-center items-center shadow-md">
                             ลอยกระทงเสี่ยงทายโชคลาภ 🌕 ✨
                         </button>
                     </form>
@@ -394,7 +394,7 @@
             const branchObj = BRANCHES.find(b => b.id === selectedBranch);
 
             return `
-                <div class="w-full card-glass p-6 md:p-8 rounded-3xl glow-pink text-center relative bg-white/90">
+                <div class="w-full card-glass p-6 md:p-8 rounded-3xl glow-pink text-center relative bg-white/95">
                     <div class="flex justify-between items-center mb-6 border-b border-pink-100 pb-4">
                         <div class="text-left">
                             <h3 class="font-bold text-pink-600 text-lg">เบอร์: ${customerPhone}</h3>
@@ -402,7 +402,7 @@
                         </div>
                         <div class="bg-pink-50 px-4 py-2 rounded-2xl border border-pink-200">
                             <span class="text-xs text-purple-500">สิทธิ์ลอยกระทง:</span>
-                            <span id="remaining-count" class="text-lg font-bold text-pink-600 ml-1">${remaining} ครั้ง</span>
+                            <span class="text-lg font-bold text-pink-600 ml-1">${remaining} ครั้ง</span>
                         </div>
                     </div>
 
@@ -436,7 +436,6 @@
             const loader = document.getElementById(`loader-${num}`);
             if (loader) { loader.classList.remove('hidden'); loader.classList.add('flex'); }
 
-            // เช็คข้อมูลล่าสุดจาก Supabase สดๆ ทันทีก่อนเปิดกระทง ป้องกันการกดรัวหรือสุ่มข้ามเครื่อง
             let supaDraws = 0;
             let supaHistory = [];
             if (supabaseClient) {
@@ -476,7 +475,7 @@
 
             const modal = document.createElement('div');
             modal.id = 'anim-modal';
-            modal.className = 'fixed inset-0 bg-black/60 backdrop-blur-md z-50 flex flex-col items-center justify-center p-6 text-center';
+            modal.className = 'fixed inset-0 bg-black/40 backdrop-blur-md z-50 flex flex-col items-center justify-center p-6 text-center';
             modal.innerHTML = `
                 <div class="card-glass p-8 rounded-3xl max-w-sm w-full bg-white glow-pink">
                     <div class="text-7xl mb-4 animate-bounce">🕯️🌊</div>
@@ -522,7 +521,7 @@
             const isImg = typeof reward.image === 'string' && reward.image.startsWith('data:image');
 
             const modal = document.createElement('div');
-            modal.className = 'fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4';
+            modal.className = 'fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4';
             modal.innerHTML = `
                 <div class="card-glass p-6 md:p-8 rounded-3xl max-w-md w-full text-center glow-pink relative bg-white">
                     <div class="text-6xl mb-2 animate-bounce">🎉</div>
@@ -560,7 +559,7 @@
                     </div>
                     <form id="admin-login-form" class="space-y-4">
                         <div>
-                            <input type="password" id="admin-passcode" required placeholder="รหัสผ่านส่วนกลาง" class="w-full px-4 py-3 rounded-2xl bg-white border-2 border-pink-200 text-gray-700 text-center focus:outline-none focus:border-pink-500 shadow-sm">
+                            <input type="password" id="admin-passcode" required placeholder="รหัสผ่านส่วนกลาง" class="w-full px-4 py-3.5 rounded-2xl bg-white border-2 border-pink-200 text-gray-700 text-center focus:outline-none focus:border-pink-500 shadow-sm">
                         </div>
                         <button type="submit" class="w-full py-3.5 rounded-2xl bg-gradient-to-r from-pink-500 to-rose-400 text-white font-bold hover:from-pink-600 glow-pink shadow-md">เข้าสู่ระบบแอดมิน</button>
                     </form>
@@ -718,7 +717,7 @@
             const isImg = typeof reward.image === 'string' && reward.image.startsWith('data:image');
 
             const modal = document.createElement('div');
-            modal.className = 'fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4';
+            modal.className = 'fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4';
             modal.innerHTML = `
                 <div class="card-glass p-6 rounded-3xl max-w-md w-full glow-pink bg-white">
                     <h3 class="text-xl font-bold text-pink-600 mb-4"><i class="fa-solid fa-pen-to-square mr-2"></i> แก้ไขของรางวัล</h3>
@@ -787,7 +786,7 @@
         function addNewRewardModal() {
             let tempImage = '🌸';
             const modal = document.createElement('div');
-            modal.className = 'fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4';
+            modal.className = 'fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4';
             modal.innerHTML = `
                 <div class="card-glass p-6 rounded-3xl max-w-md w-full glow-pink bg-white">
                     <h3 class="text-xl font-bold text-pink-600 mb-4"><i class="fa-solid fa-plus-circle mr-2"></i> เพิ่มของรางวัลใหม่</h3>
